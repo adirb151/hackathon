@@ -4,57 +4,46 @@ from pynput import *
 import time
 import msvcrt
 
-teamName = 'Rom\n'
-def on_press(key):
-    try:
-        print('key {0} pressed'.format(key.char))
-        tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
-    except:
-        print('bad shit')
-        tcpSocket.close()
-        return False
-
-def on_release(key):
-    print('{0} released'.format(key.char))
-
+teamName = 'AdiRom\n'
 serverName = 'localhost'
 serverPort = 13117
+
 while 1:
     clientSocket = socket(AF_INET, SOCK_DGRAM)
     clientSocket.bind((serverName, serverPort))
     print('Client started, listening for offer requests...')
-    data, addr = clientSocket.recvfrom(1024)
+    try:
+        data, addr = clientSocket.recvfrom(1024)
+    except:
+        break
     serverName = addr[0]
     magicCookie = hex(unpack('!Ibh', data)[0])
     serverTCPPort = unpack('!Ibh', data)[2]
     port = unpack('!Ibh', data)[2]
-    if magicCookie != '0xfeedbeef':
+    if magicCookie != '0xfeedbeef': #accept only messages containing the magic cookie
         continue
     print('Received offer from {}, attempting to connect...'.format(addr[0]))
     clientSocket.close()
     tcpSocket = socket(AF_INET, SOCK_STREAM)
     tcpSocket.connect((serverName, port))
-    tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
-    print(tcpSocket.recv(1024).decode('utf-8'))
-    timeout = time.time() + 10
+    tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8'))) # send team name
+    try:
+        print(tcpSocket.recv(1024).decode('utf-8'))
+    except:
+        break
+    timeout = time.time() + 10 #there are 10s to type chars
 
     while time.time() < timeout:
-        if msvcrt.kbhit():
+        if msvcrt.kbhit(): #if key pressed, send info to server
             msvcrt.getch()
             try:
                 tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
             except:
-                #tcpSocket.close()
                 break
 
-    print(tcpSocket.recv(1024).decode('utf-8'))
+    try:
+        print(tcpSocket.recv(1024).decode('utf-8'))
+    except:
+        print('Error')
     print('Server disconnected, listening for offer requests...')
     tcpSocket.close()
-#sentence = input('Input lowercase sentence:')
-#size = len(sentence)
-#with keyboard.Listener(
-#        on_press=on_press,
-#        on_release=on_release) as listener:
-#    listener.join()
-#modifiedSentence = unpack(str(size)+'s',clientSocket.recv(1024))
-#print('From Server:', modifiedSentence[0].decode("utf-8"))
