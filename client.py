@@ -4,46 +4,54 @@ from pynput import *
 import time
 import msvcrt
 
-teamName = 'AdiRom\n'
-serverName = 'localhost'
-serverPort = 13117
+teamName = 'Rom\n'
+IP = 'localhost'
+UDPPort = 13117
+gameDuration = 10
 
 while 1:
-    clientSocket = socket(AF_INET, SOCK_DGRAM)
-    clientSocket.bind((serverName, serverPort))
+    UDPSocket = socket(AF_INET, SOCK_DGRAM)
+    try:
+        UDPSocket.bind((IP, UDPPort))
+    except:
+        UDPSocket.close()   #in case port is taken, try again
+        continue
     print('Client started, listening for offer requests...')
     try:
-        data, addr = clientSocket.recvfrom(1024)
+        data, addr = UDPSocket.recvfrom(1024)
     except:
-        break
-    serverName = addr[0]
+        UDPSocket.close()
+        continue
+    serverIP = addr[0]
     magicCookie = hex(unpack('!Ibh', data)[0])
     serverTCPPort = unpack('!Ibh', data)[2]
-    port = unpack('!Ibh', data)[2]
     if magicCookie != '0xfeedbeef': #accept only messages containing the magic cookie
+        UDPSocket.close()
         continue
-    print('Received offer from {}, attempting to connect...'.format(addr[0]))
-    clientSocket.close()
-    tcpSocket = socket(AF_INET, SOCK_STREAM)
-    tcpSocket.connect((serverName, port))
-    tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8'))) # send team name
+    print('Received offer from {}, attempting to connect...'.format(serverIP))
+    UDPSocket.close()
+    TCPSocket = socket(AF_INET, SOCK_STREAM)
+    TCPSocket.connect((serverIP, serverTCPPort))
+    TCPSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8'))) # send team name
     try:
-        print(tcpSocket.recv(1024).decode('utf-8'))
+        print(TCPSocket.recv(1024).decode('utf-8')) # receive game start message
     except:
-        break
-    timeout = time.time() + 10 #there are 10s to type chars
+        TCPSocket.close()
+        continue
+    timeout = time.time() + gameDuration #there are 10s to type chars
 
     while time.time() < timeout:
         if msvcrt.kbhit(): #if key pressed, send info to server
             msvcrt.getch()
             try:
-                tcpSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
+                TCPSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
             except:
                 break
 
     try:
-        print(tcpSocket.recv(1024).decode('utf-8'))
+        print(TCPSocket.recv(1024).decode('utf-8'))
     except:
+        TCPSocket.close()
         print('Error')
     print('Server disconnected, listening for offer requests...')
-    tcpSocket.close()
+    TCPSocket.close()
