@@ -38,13 +38,13 @@ while 1:
     except:
         TCPSocket.close()
         continue
-    timeout = time.time() + gameDuration #there are 10s to type chars
+    timeout = time.time() + gameDuration #there are 10s to play, so timeout is the current time plus game duration
 
     while time.time() < timeout:
         if msvcrt.kbhit(): #if key pressed, send info to server
             msvcrt.getch()
             try:
-                TCPSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8')))
+                TCPSocket.send(pack(str(len(teamName))+'s', bytes(teamName, 'utf-8'))) # send team name to know who pressed a key
             except:
                 break
 
